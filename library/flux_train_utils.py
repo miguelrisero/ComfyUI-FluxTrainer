@@ -29,21 +29,21 @@ logger = logging.getLogger(__name__)
 from comfy.utils import ProgressBar
 
 def sample_images(
-    accelerator: Accelerator,
-    args: argparse.Namespace,
-    epoch,
-    steps,
-    flux,
-    ae,
-    text_encoders,
-    sample_prompts_te_outputs,
-    validation_settings=None,
-    prompt_replacement=None,
+        accelerator: Accelerator,
+        args: argparse.Namespace,
+        epoch,
+        steps,
+        flux,
+        ae,
+        text_encoders,
+        sample_prompts_te_outputs,
+        validation_settings=None,
+        prompt_replacement=None,
 ):
 
     logger.info("")
     logger.info(f"generating sample images at step: {steps}")
-   
+
     #distributed_state = PartialState()  # for multi gpu distributed inference. this is a singleton, so it's safe to use it here
 
     # unwrap unet and text_encoder(s)
@@ -57,7 +57,7 @@ def sample_images(
         line = line.strip()
         if len(line) > 0 and line[0] != "#":
             prompts.append(line)
-    
+
     # preprocess prompts
     for i in range(len(prompts)):
         prompt_dict = prompts[i]
@@ -111,18 +111,18 @@ def sample_images(
 
 
 def sample_image_inference(
-    accelerator: Accelerator,
-    args: argparse.Namespace,
-    flux: flux_models.Flux,
-    text_encoders: Optional[List[CLIPTextModel]],
-    ae: flux_models.AutoEncoder,
-    save_dir,
-    prompt_dict,
-    epoch,
-    steps,
-    sample_prompts_te_outputs,
-    prompt_replacement,
-    validation_settings=None
+        accelerator: Accelerator,
+        args: argparse.Namespace,
+        flux: flux_models.Flux,
+        text_encoders: Optional[List[CLIPTextModel]],
+        ae: flux_models.AutoEncoder,
+        save_dir,
+        prompt_dict,
+        epoch,
+        steps,
+        sample_prompts_te_outputs,
+        prompt_replacement,
+        validation_settings=None
 ):
     assert isinstance(prompt_dict, dict)
     # negative_prompt = prompt_dict.get("negative_prompt")
@@ -213,7 +213,7 @@ def sample_image_inference(
         device=accelerator.device,
         dtype=weight_dtype,
         generator=torch.Generator(device=accelerator.device).manual_seed(seed) if seed is not None else None,
-    )
+        )
     timesteps = get_schedule(sample_steps, noise.shape[1], base_shift=base_shift, max_shift=max_shift, shift=shift)  # FLUX.1 dev -> shift=True
     #print("TIMESTEPS: ", timesteps)
     img_ids = flux_utils.prepare_img_ids(1, packed_latent_height, packed_latent_width).to(accelerator.device, weight_dtype)
@@ -242,10 +242,10 @@ def sample_image_inference(
     # but adding 'enum' to the filename should be enough
 
     ts_str = time.strftime("%Y%m%d%H%M%S", time.localtime())
-    num_suffix = f"e{epoch:06d}" if epoch is not None else f"{steps:06d}"
+    num_suffix = f"{steps:06d}"
     seed_suffix = "" if seed is None else f"_{seed}"
     i: int = prompt_dict["enum"]
-    img_filename = f"{'' if args.output_name is None else args.output_name + '_'}{num_suffix}_{i:02d}_{ts_str}{seed_suffix}.png"
+    img_filename = f"{'step' if args.output_name is None else args.output_name + '_step'}{num_suffix}_{i:02d}_{ts_str}{seed_suffix}.png"
     image.save(os.path.join(save_dir, img_filename))
     return x
 
@@ -273,11 +273,11 @@ def get_lin_function(x1: float = 256, y1: float = 0.5, x2: float = 4096, y2: flo
 
 
 def get_schedule(
-    num_steps: int,
-    image_seq_len: int,
-    base_shift: float = 0.5,
-    max_shift: float = 1.15,
-    shift: bool = True,
+        num_steps: int,
+        image_seq_len: int,
+        base_shift: float = 0.5,
+        max_shift: float = 1.15,
+        shift: bool = True,
 ) -> list[float]:
     # extra step for zero
     timesteps = torch.linspace(1, 0, num_steps + 1)
@@ -292,15 +292,15 @@ def get_schedule(
 
 
 def denoise(
-    model: flux_models.Flux,
-    img: torch.Tensor,
-    img_ids: torch.Tensor,
-    txt: torch.Tensor,
-    txt_ids: torch.Tensor,
-    vec: torch.Tensor,
-    timesteps: list[float],
-    guidance: float = 4.0,
-    t5_attn_mask: Optional[torch.Tensor] = None,
+        model: flux_models.Flux,
+        img: torch.Tensor,
+        img_ids: torch.Tensor,
+        txt: torch.Tensor,
+        txt_ids: torch.Tensor,
+        vec: torch.Tensor,
+        timesteps: list[float],
+        guidance: float = 4.0,
+        t5_attn_mask: Optional[torch.Tensor] = None,
 ):
     # this is ignored for schnell
     guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
@@ -340,7 +340,7 @@ def get_sigmas(noise_scheduler, timesteps, device, n_dim=4, dtype=torch.float32)
 
 
 def compute_density_for_timestep_sampling(
-    weighting_scheme: str, batch_size: int, logit_mean: float = None, logit_std: float = None, mode_scale: float = None
+        weighting_scheme: str, batch_size: int, logit_mean: float = None, logit_std: float = None, mode_scale: float = None
 ):
     """Compute the density for sampling the timesteps when doing SD3 training.
     Courtesy: This was contributed by Rafie Walker in https://github.com/huggingface/diffusers/pull/8528.
@@ -374,7 +374,7 @@ def compute_loss_weighting_for_sd3(weighting_scheme: str, sigmas=None):
 
 
 def get_noisy_model_input_and_timesteps(
-    args, noise_scheduler, latents, noise, device, dtype
+        args, noise_scheduler, latents, noise, device, dtype
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     bsz, _, H, W = latents.shape
     sigmas = None
@@ -448,11 +448,11 @@ def apply_model_prediction_type(args, model_pred, noisy_model_input, sigmas):
 
 
 def save_models(
-    ckpt_path: str,
-    flux: flux_models.Flux,
-    sai_metadata: Optional[dict],
-    save_dtype: Optional[torch.dtype] = None,
-    use_mem_eff_save: bool = False,
+        ckpt_path: str,
+        flux: flux_models.Flux,
+        sai_metadata: Optional[dict],
+        save_dtype: Optional[torch.dtype] = None,
+        use_mem_eff_save: bool = False,
 ):
     state_dict = {}
 
@@ -472,7 +472,7 @@ def save_models(
 
 
 def save_flux_model_on_train_end(
-    args: argparse.Namespace, save_dtype: torch.dtype, epoch: int, global_step: int, flux: flux_models.Flux
+        args: argparse.Namespace, save_dtype: torch.dtype, epoch: int, global_step: int, flux: flux_models.Flux
 ):
     def sd_saver(ckpt_file, epoch_no, global_step):
         sai_metadata = train_util.get_sai_model_spec(None, args, False, False, False, is_stable_diffusion_ckpt=True, flux="dev")
@@ -484,14 +484,14 @@ def save_flux_model_on_train_end(
 # epochとstepの保存、メタデータにepoch/stepが含まれ引数が同じになるため、統合している
 # on_epoch_end: Trueならepoch終了時、Falseならstep経過時
 def save_flux_model_on_epoch_end_or_stepwise(
-    args: argparse.Namespace,
-    on_epoch_end: bool,
-    accelerator,
-    save_dtype: torch.dtype,
-    epoch: int,
-    num_train_epochs: int,
-    global_step: int,
-    flux: flux_models.Flux,
+        args: argparse.Namespace,
+        on_epoch_end: bool,
+        accelerator,
+        save_dtype: torch.dtype,
+        epoch: int,
+        num_train_epochs: int,
+        global_step: int,
+        flux: flux_models.Flux,
 ):
     def sd_saver(ckpt_file, epoch_no, global_step):
         sai_metadata = train_util.get_sai_model_spec(None, args, False, False, False, is_stable_diffusion_ckpt=True, flux="dev")
@@ -531,7 +531,7 @@ def add_flux_train_arguments(parser: argparse.ArgumentParser):
         type=int,
         default=None,
         help="maximum token length for T5-XXL. if omitted, 256 for schnell and 512 for dev"
-        " / T5-XXLの最大トークン長。省略された場合、schnellの場合は256、devの場合は512",
+             " / T5-XXLの最大トークン長。省略された場合、schnellの場合は256、devの場合は512",
     )
     parser.add_argument(
         "--apply_t5_attn_mask",
@@ -551,7 +551,7 @@ def add_flux_train_arguments(parser: argparse.ArgumentParser):
         type=int,
         default=None,
         help="text encoder batch size (default: None, use dataset's batch size)"
-        + " / text encoderのバッチサイズ（デフォルト: None, データセットのバッチサイズを使用）",
+             + " / text encoderのバッチサイズ（デフォルト: None, データセットのバッチサイズを使用）",
     )
     parser.add_argument(
         "--disable_mmap_load_safetensors",
@@ -588,7 +588,7 @@ def add_flux_train_arguments(parser: argparse.ArgumentParser):
         choices=["sigma", "uniform", "sigmoid", "shift", "flux_shift"],
         default="sigma",
         help="Method to sample timesteps: sigma-based, uniform random, sigmoid of random normal, shift of sigmoid and FLUX.1 shifting."
-        " / タイムステップをサンプリングする方法：sigma、random uniform、random normalのsigmoid、sigmoidのシフト、FLUX.1のシフト。",
+             " / タイムステップをサンプリングする方法：sigma、random uniform、random normalのsigmoid、sigmoidのシフト、FLUX.1のシフト。",
     )
     parser.add_argument(
         "--sigmoid_scale",
@@ -601,9 +601,9 @@ def add_flux_train_arguments(parser: argparse.ArgumentParser):
         choices=["raw", "additive", "sigma_scaled"],
         default="sigma_scaled",
         help="How to interpret and process the model prediction: "
-        "raw (use as is), additive (add to noisy input), sigma_scaled (apply sigma scaling)."
-        " / モデル予測の解釈と処理方法："
-        "raw（そのまま使用）、additive（ノイズ入力に加算）、sigma_scaled（シグマスケーリングを適用）。",
+             "raw (use as is), additive (add to noisy input), sigma_scaled (apply sigma scaling)."
+             " / モデル予測の解釈と処理方法："
+             "raw（そのまま使用）、additive（ノイズ入力に加算）、sigma_scaled（シグマスケーリングを適用）。",
     )
     parser.add_argument(
         "--discrete_flow_shift",
